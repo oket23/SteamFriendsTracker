@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  gateway.api:
+    image: ${DOCKER_REGISTRY-}gatewayapi
+    build:
+      context: .
+      dockerfile: Gateway.Api/Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - Redis__ConnectionString=${REDIS_CONNECTION_STRING}
+    volumes:
+      - ./certs:/https:ro
+    networks:
+      - proxybackend
+
+  auth.api:
+    image: ${DOCKER_REGISTRY-}authapi
+    depends_on:
+      - postgres
+      - redis
+    build:
+      context: .
+      dockerfile: Auth.API/Dockerfile
+    ports:
+      - "5100:5100"
+    environment:
+      - ASPNETCORE_URLS=http://+:5100
+      - Redis__ConnectionString=${REDIS_CONNECTION_STRING}
+      - Postgres__ConnectionString=${POSTGRES_CONNECTION_STRING}
+    networks:
+      - proxybackend
+
+  friends.api:
+    image: ${DOCKER_REGISTRY-}friendsapi
+    build:
+      context: .
+      dockerfile: Friends.Api/Dockerfile
+    ports:
+      - "5200:5200"
+    environment:
+      - ASPNETCORE_URLS=http://+:5200
+      - Redis__ConnectionString=${REDIS_CONNECTION_STRING}
+    networks:
+      - proxybackend
+
+  game.api:
+    image: ${DOCKER_REGISTRY-}gameapi
+    build:
+      context: .
+      dockerfile: Game.Api/Dockerfile
+    ports:
+      - "5300:5300"
+    environment:
+      - ASPNETCORE_URLS=http://+:5300
+      - Redis__ConnectionString=${REDIS_CONNECTION_STRING}
+    networks:
+      - proxybackend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - proxybackend
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - proxybackend
+
+
+volumes:
+  pg_data:
+
+networks:
+  proxybackend:
+    name: proxybackend
+    driver: bridge
